@@ -1,6 +1,6 @@
-# ryanDB
+# RaftDB
 
-ryanDB is a distributed key-value store written in Go. It creates a cluster of nodes that coordinate to maintain a replicated and fault-tolerant database.
+This is a distributed key-value store written in Go. It creates a cluster of nodes that coordinate to maintain a replicated and fault-tolerant database.
 
 The project implements the [Raft](https://raft.github.io/raft.pdf) consensus algorithm which ensures:
 
