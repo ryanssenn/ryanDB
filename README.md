@@ -58,7 +58,8 @@ go test -v ./test
 - Stress test
 - Performance benchmark
 
+# Resources
 
-
+I developed the understanding needed to implement the Raft paper through McGill’s graduate course [COMP 512 (Distributed Systems)](https://www.mcgill.ca/study/2024-2025/courses/comp-512) taught by professor Bettina Kemme 
 
 
