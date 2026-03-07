@@ -25,12 +25,19 @@ Data durability is handled via an append-only log structure. Each node maintains
 
 <img width="60%" height="60%" alt="image" src="https://github.com/user-attachments/assets/6c7bf543-4297-4383-9367-21f5dbeb4911" />
 
-## Features:
-- Linearizable reads and writes (handled by the leader; followers forward client requests)
-- Leader election and heartbeats
-- Log replication with commit tracking
-- Recovery from crashes with persistent logs and metadata
-- HTTP API for external clients, gRPC for internal cluster communication
+# Core Features
+
+- Strong Consistency (Linearizability): Guarantees that once a write is acknowledged, all subsequent reads will reflect that write or a later one. Client requests to followers are automatically proxied to the current cluster leader via internal gRPC channels.
+
+- High Availability via Raft Consensus: Implements a robust leader election mechanism with randomized timeouts to ensure the cluster remains operational and elects a new primary node within milliseconds of a failure.
+
+- Durable State Machine Replication: Uses an append-only Write-Ahead Log (WAL) to ensure that every committed transaction is persisted to disk. The system handles full state reconstruction upon node restart using .rlog and .meta recovery files.
+
+- Hybrid Communication Architecture: * Internal (gRPC/Protobuf): Low-latency, type-safe RPCs used for cluster-wide coordination, log replication, and heartbeats.
+
+- External (RESTful HTTP): A simple, language-agnostic API for client operations (GET, PUT) and cluster health monitoring.
+
+- Fault-Tolerant Log Catch-up: Automatically synchronizes lagging or newly joined nodes by identifying log inconsistencies and backfilling missing entries from the leader's log.
 
 ## Running a node:
 
