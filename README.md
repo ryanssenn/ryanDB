@@ -1,11 +1,17 @@
 # RaftDB
 
-This is a distributed key-value store written in Go. It creates a cluster of nodes that coordinate to maintain a replicated and fault-tolerant database.
+A Distributed, Linearly Consistent Key-Value Store. This system leverages the [Raft](https://raft.github.io/raft.pdf) Consensus Algorithm to maintain strict data consistency across a distributed cluster, ensuring service availability even during node failures or network partitions.
 
-The project implements the [Raft](https://raft.github.io/raft.pdf) consensus algorithm which ensures:
+Problems solved:
 
-- **Linearizability**: operations are applied in a single consistent order across all machines
-- **Persistence**: the system recovers all committed data from crashes
+- Safety over Liveness: Property where a candidate must have a log as up-to-date as the majority to win an election, preventing "stale" leaders from overwriting committed data.
+
+- gRPC Transport Layer: Leveraged gRPC and Protobuf for internal cluster RPCs to minimize serialization overhead and ensure type-safe communication between nodes.
+
+- Concurrency & Locking: Managed complex state transitions (Follower → Candidate → Leader) using Go's sync.Mutex and channel primitives to prevent race conditions during high-frequency heartbeat intervals.
+
+- State Machine Replication (SMR): Architected the separation between the Raft log layer and the underlying state machine, allowing for modular database backends.
+
 
 # Raft mechanics
 
@@ -37,29 +43,35 @@ Data durability is handled via an append-only log structure. Each node maintains
 
 # Testing
 
-The project has integration tests that spawn a local N-node cluster to validate distributed consensus mechanics under failure conditions.
+To ensure the robustness of the consensus logic, I built a testing framework that simulates real-world distributed failures:
 
 ```
 go test -v ./test
 ```
 
-#### Scenarios:
+#### Adversarial Testing & Cluster Resilience:
 
-- Leader election and re-election after leader crash (TestElection)
-- Basic log replication for a single write (TestLogReplication)
-- Higher log replication under concurrent writes from random nodes (Test100LogReplication)
-- Log durability and state recovery across node restarts (TestLogPersistence)
-- Catch-up of a node that was offline and missed replicated logs (TestMissedLogsRecovery)
-- Sustained follower churn (random stop/start) under write load (TestFollowerChurnUnderLoad)
-- Network partition and healing with cluster-wide state convergence (TestNetworkPartition)
+- Leader Election & Term Consistency (TestElection): Validates the liveness of the cluster by ensuring a new leader is elected within a single randomized election timeout following a primary node failure.
+
+- Linearizable Log Replication (TestLogReplication): Confirms that a single write is correctly replicated and committed to a majority of nodes before being acknowledged.
+
+- Concurrency & High-Throughput Stress (Test100LogReplication): Evaluates the system under a heavy load of concurrent writes from multiple clients, ensuring all nodes reach the same final state machine index without log divergence.
+
+- Durability & Crash Recovery (TestLogPersistence): Verifies the persistence layer by crashing nodes and ensuring they reconstruct their entire state machine from the .rlog and .meta files upon restart.
+
+- Dynamic Catch-up Logic (TestMissedLogsRecovery): Tests the NextIndex and MatchIndex logic by forcing a node offline and ensuring it correctly synchronizes missed entries from the leader once re-connected.
+
+- Availability under High Churn (TestFollowerChurnUnderLoad): Simulates a "flapping" network or unstable hardware by randomly stopping and starting follower nodes under a continuous write load to verify cluster stability.
+
+- Network Partition Resilience (TestNetworkPartition): A critical safety test that simulates a split-brain scenario. It ensures that only the majority partition can commit entries and that the minority partition correctly rolls back uncommitted entries once the network heals.
 
 ## Future goals:
-- Log compaction
-- Stress test
-- Performance benchmark
+- Log Compaction (Snapshotting): Implementation of the Snapshotting mechanism to prevent the WAL (Write Ahead Log) from growing indefinitely and to speed up node recovery.
+
+- Batching & Pipelining: Optimizing AppendEntries to batch multiple log entries into a single RPC to improve throughput.
 
 # Resources
 
-I developed the understanding needed to implement the Raft paper through McGill’s graduate course [COMP 512 (Distributed Systems)](https://www.mcgill.ca/study/2024-2025/courses/comp-512) taught by professor Bettina Kemme 
+This project was developed as a deep-dive into distributed consensus following the curriculum of McGill University's COMP 512 (Distributed Systems) by Professor Bettina Kemme
 
 
